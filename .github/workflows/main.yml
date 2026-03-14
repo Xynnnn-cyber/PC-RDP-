@@ -1,4 +1,4 @@
-name: PC-RDP-ULTRA-OPTIMIZED
+name: PC-RDP-GOD-MODE-V2
 
 on:
   workflow_dispatch:
@@ -9,52 +9,48 @@ jobs:
     timeout-minutes: 3600
 
     steps:
-      - name: 1. Maximize CPU & Disable Security
+      - name: 1. Matar Seguridad y Bloquear Microsoft Account
         run: |
-          # Prioridad máxima al procesador para aplicaciones
-          reg add "HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 38 /f
+          # Desactivar NLA (Esto evita que te pida Windows Hello antes de conectar)
+          reg add "HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 0 /f
+          reg add "HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v SecurityLayer /t REG_DWORD /d 0 /f
           
-          # Desactivar Windows Defender (Ahorra mucha CPU y RAM)
+          # Permitir Administradores Locales sin restricciones
+          reg add "HKLM\System\CurrentControlSet\Control\Lsa" /v LimitBlankPasswordUse /t REG_DWORD /d 0 /f
+          reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f
+          
+          # Saltar configuracion de cuenta Microsoft (OOBE Bypass)
+          reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\OOBE" /v BypassNRO /t REG_DWORD /d 1 /f
+          
+          # Desactivar Defender y UAC para maximo rendimiento
           Set-MpPreference -DisableRealtimeMonitoring $true
-          
-          # Desactivar UAC y restricciones de Admin
-          reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 0 /f
           reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 0 /f
-
-      - name: 2. Ghost Windows (Optimization)
-        run: |
-          # Quitar todos los efectos visuales (Parecerá Windows clásico pero vuela)
-          reg add "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f
-          
-          # Habilitar RDP sin autenticación de red (Más rápido)
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
-          
-          # Abrir Firewall total
           netsh advfirewall set allprofiles state off
 
-      - name: 3. Create God-Mode User
+      - name: 2. Crear Usuario Super-Admin Local
         run: |
           $user = "RDP"
           $pass = "Admin12345!"
           net user $user $pass /add /expires:never
           net localgroup Administrators $user /add
-          echo "USER_PASS=$pass" >> $env:GITHUB_ENV
+          net localgroup "Remote Desktop Users" $user /add
+          # Forzar prioridad de procesador para aplicaciones 3D
+          reg add "HKLM\System\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 38 /f
 
-      - name: 4. Tailscale Fast-Connect
+      - name: 3. Instalacion Express de Tailscale
         run: |
-          $tsUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi"
-          Invoke-WebRequest -Uri $tsUrl -OutFile "ts.msi"
+          Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-1.82.0-amd64.msi" -OutFile "ts.msi"
           Start-Process msiexec.exe -ArgumentList "/i", "ts.msi", "/quiet", "/norestart" -Wait
-          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-gaming-pc
+          & "$env:ProgramFiles\Tailscale\tailscale.exe" up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-beast-pc
           $tsIP = & "$env:ProgramFiles\Tailscale\tailscale.exe" ip -4
           echo "TS_IP=$tsIP" >> $env:GITHUB_ENV
 
-      - name: 5. Final Details
+      - name: 4. Datos Finales de Acceso
         run: |
           Write-Host "`n========================================"
+          Write-Host "¡USA ESTOS DATOS EXACTOS!"
           Write-Host "IP: $env:TS_IP"
-          Write-Host "USER: RDP"
-          Write-Host "PASS: Admin12345!"
+          Write-Host "Usuario: .\RDP"
+          Write-Host "Contraseña: Admin12345!"
           Write-Host "========================================`n"
           while ($true) { Start-Sleep -Seconds 300 }
